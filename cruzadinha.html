@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cruzadinha (visual simples)</title>
+  <style>
+    :root { --baseW: 1155px; --baseH: 650px; }
+
+    html, body{
+      height:100%;
+      margin:0;
+      font-family:"Segoe UI", Arial, sans-serif;
+      overflow:hidden;
+      /* Mesmo “jeito” do arquivo anexo: background em imagem (se não existir, fica cor sólida) */
+     background: url(img/bg.png);
+      background-size: cover;
+    }
+
+    #stage{
+      position:absolute;
+      width:var(--baseW);
+      height:var(--baseH);
+      left:50%;
+      top:50%;
+      transform:translate(-50%, -50%) scale(1);
+      transform-origin:center center;
+      will-change:transform;
+    }
+
+    /* Visual mais simples que o “glass” original: sem blur, sem sombra pesada */
+    .panel{
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 10px;
+    }
+
+    #container{
+      width:100%;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding:10px;
+      box-sizing:border-box;
+      gap:10px;
+    }
+
+    header{
+      justify-content:center;
+      align-items:center;
+    }
+
+    #topbar{
+      display:inline-flex;
+      align-items:center;
+      gap:12px;
+      padding:8px 12px;
+    }
+
+    #cronometro{
+      font-size:16px;
+      font-weight:700;
+      color:#333;
+      min-width: 140px;
+    }
+
+    button{
+      padding:6px 14px;
+      font-size:14px;
+      font-weight:700;
+      border:none;
+      border-radius:6px;
+      color:#fff;
+      cursor:pointer;
+      transition: background .2s, transform .05s;
+    }
+    button:active{ transform: translateY(1px); }
+
+
+
+    #btnLimpar{ background:#2196f3; }
+    #btnLimpar:hover{ background:#1976d2; }
+
+    main{
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:stretch;
+      gap:10px;
+      overflow:hidden;
+    }
+
+    #sidebar{
+      flex: 0 0 360px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:10px 14px;
+      box-sizing:border-box;
+    }
+
+    #sidebar h2{
+      margin:0;
+      font-size:16px;
+      color:#333;
+    }
+
+    #clues{
+      margin:0;
+      padding-left:18px;
+      color:#333;
+      font-size:15px;
+      line-height:1.25;
+    }
+    #clues li{ margin: 8px 0; }
+    .meta{
+      font-size:13px;
+      color:#444;
+    }
+
+    .msg{
+      padding:10px;
+      border-radius:8px;
+      border:1px solid rgba(0,0,0,.10);
+      background:#fff;
+      color:#333;
+      font-weight:700;
+      min-height:40px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .msg.ok{ border-color: rgba(0,133,66,.35); color:#008542; }
+    .msg.bad{ border-color: rgba(220,38,38,.35); color:#dc2626; }
+
+    #board{
+      flex: 1 1 auto;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:12px;
+      box-sizing:border-box;
+      position:relative;
+    }
+
+    table{
+      border-collapse:collapse;
+      user-select:none;
+      margin:0;
+      background:#fff;
+    }
+
+    td{
+      width:40px;
+      height:40px;
+      border:1px solid #cfcfcf;
+      text-align:center;
+      vertical-align:middle;
+      position:relative;
+      padding:0;
+    }
+
+    td.black{
+      background:#efefef;
+    }
+
+    td.correct{
+      background: rgba(0,133,66,.18);
+      border-color: rgba(0,133,66,.35);
+    }
+
+    td.wrong{
+      background: rgba(220,38,38,.16);
+      border-color: rgba(220,38,38,.35);
+    }
+
+    td .num{
+      position:absolute;
+      top:2px;
+      left:4px;
+      font-size:10px;
+      font-weight:800;
+      color:#555;
+      pointer-events:none;
+    }
+
+    td input{
+      width:100%;
+      height:100%;
+      border:0;
+      outline:none;
+      background:transparent;
+      text-align:center;
+      font-weight:800;
+      font-size:18px;
+      text-transform:uppercase;
+      color:#222;
+    }
+
+    .note{
+      font-size:12px;
+      color:#555;
+      margin-top:-4px;
+    }
+
+    td.active{
+      outline:2px solid rgba(33,150,243,.65);
+      outline-offset:-2px;
+    }
+
+
+    #gridWrap{
+      display:inline-block;
+      transition: transform .15s ease;
+    }
+
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="container">
+      <header>
+        <div id="topbar" class="panel">
+
+          <button id="btnLimpar">🧹 Limpar</button>
+        </div>
+      </header>
+
+      <main>
+        <aside id="sidebar" class="panel">
+          <h2>Perguntas</h2>
+          <ol id="clues"></ol>
+          <div id="msg" class="msg">
+            Digite as palavras nos campos ao lado.
+          </div>
+          <div class="meta" id="meta"></div>
+        </aside>
+
+        <section id="board" class="panel">
+          <div id="gridWrap" style="transform-origin: center center; will-change: transform;"><table id="grid" aria-label="Cruzadinha"></table></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal de finalização -->
+  <div id="winOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; align-items:center; justify-content:center;">
+    <div style="width:min(520px, 92vw); background:#fff; border:1px solid rgba(0,0,0,.18); border-radius:12px; padding:16px 16px 14px;">
+      <div style="font-size:18px; font-weight:800; color:#008542; margin-bottom:8px;">🎉 Parabéns!</div>
+      <div style="color:#333; font-size:14px; line-height:1.3; margin-bottom:14px;">
+       Você acertou todas as palavras!
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button id="btnCloseWin" style="background:#616161;">Fechar</button>
+        <button id="btnNewWin" style="background:#2196f3;">Novo jogo</button>
+      </div>
+    </div>
+
+
+  <script>
+    // ===== Config =====
+    const SIZE = 16;
+
+    const WORDS = [
+      { id: 1, label:"1", dir:"across", row:14, col:1,  answer:"EXÓTICAINVASORA", clue:"Espécie como o coral-sol no Brasil." },
+      { id: 2, label:"2", dir:"down",   row:7,  col:11, answer:"PREVENÇÃO",       clue:"Na segurança, meio ambiente e saúde (SMS) é uma palavra-chave." },
+      { id: 3, label:"3", dir:"across", row:3,  col:3,  answer:"BIOINCRUSTAÇÃO",  clue:"Acúmulo de pequenos animais e microrganismos em superfícies submersas, tanto naturais quanto artificiais." },
+      { id: 4, label:"4", dir:"down",   row:3,  col:6,  answer:"INCRUSTANTE",     clue:"Anti(?). Tipo de tinta utilizada nos cascos das embarcações." },
+      { id: 5, label:"5", dir:"across", row:12, col:9,  answer:"CONTROLE",        clue:"Termo correspondente a letra “C” da sigla PPCEX." },
+    ];
+
+    // ===== Helpers =====
+    const toIdx = (r, c) => (r - 1) * SIZE + (c - 1);
+    const inBounds = (r, c) => r >= 1 && r <= SIZE && c >= 1 && c <= SIZE;
+    const normalizeLetter = (ch) => {
+  const s = (ch || "").toString();
+  // pega a primeira letra (inclui acentos) - compatível
+  const m = s.match(/[A-Za-zÀ-ÖØ-öø-ÿ]/);
+  return m ? m[0].toUpperCase() : "";
+  };
+const normalizeForCompare = (str) => {
+  return (str || "")
+    .toString()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // remove acentos
+    .replace(/[^A-Z]/g, "");         // remove espaços e símbolos
+};
+
+    const solution = Array(SIZE * SIZE).fill(null);
+    const numberedCells = new Map();
+    const belongsTo = Array.from({length: SIZE * SIZE}, () => []);
+    let activeWordId = null;
+    let winShown = false;
+
+    // Build solution grid
+    for (const w of WORDS){
+      const letters = normalizeForCompare(w.answer).split("");
+      for (let i=0; i<letters.length; i++){
+        const r = w.row + (w.dir === "down" ? i : 0);
+        const c = w.col + (w.dir === "across" ? i : 0);
+        if (!inBounds(r,c)) throw new Error("Fora da grade: " + w.answer);
+        const idx = toIdx(r,c);
+        if (solution[idx] && solution[idx] !== letters[i]){
+          throw new Error("Conflito na grade em r"+r+" c"+c);
+        }
+        solution[idx] = letters[i];
+        belongsTo[idx].push(w.id);
+      }
+      numberedCells.set(toIdx(w.row, w.col), w.label);
+    }
+
+    const gridEl = document.getElementById("grid");
+    const gridWrap = document.getElementById("gridWrap");
+    const cluesEl = document.getElementById("clues");
+    const msgEl = document.getElementById("msg");
+    const metaEl = document.getElementById("meta");
+
+    const winOverlay = document.getElementById("winOverlay");
+    const btnCloseWin = document.getElementById("btnCloseWin");
+    const btnNewWin = document.getElementById("btnNewWin");
+
+    function openWin(){ if (!winOverlay) return; winOverlay.style.display = "flex"; }
+    function closeWin(){ if (!winOverlay) return; winOverlay.style.display = "none"; }
+
+
+    function setMsg(type, text){
+      msgEl.classList.remove("ok","bad");
+      if (type) msgEl.classList.add(type);
+      msgEl.textContent = text;
+    }
+
+    function getCell(idx){ return gridEl.querySelector('input[data-idx="'+idx+'"]'); }
+    function getWordById(id){ return WORDS.find(w => w.id === id) || null; }
+
+    function highlightActive(){
+      gridEl.querySelectorAll("td.active").forEach(td => td.classList.remove("active"));
+      if (!activeWordId) return;
+      const w = getWordById(activeWordId);
+      if (!w) return;
+      for (const idx of wordCells(w)){
+        const td = gridEl.querySelector('td[data-idx="'+idx+'"]');
+        if (td) td.classList.add("active");
+      }
+    }
+
+    function setActiveWord(id){
+      activeWordId = id;
+      highlightActive();
+      // foca no primeiro campo vazio da palavra (ou no primeiro)
+      const w = getWordById(activeWordId);
+      if (!w) return;
+      const cells = wordCells(w);
+      let target = cells[0];
+      for (const idx of cells){
+        const v = normalizeLetter(getCell(idx)?.value || "");
+        if (!v){ target = idx; break; }
+      }
+      getCell(target)?.focus();
+    }
+
+    function ensureActiveForCell(idx){
+      // Se a célula pertence à palavra ativa, mantém.
+      if (activeWordId && belongsTo[idx]?.includes(activeWordId)) return;
+      // Se não, define a primeira palavra que contém esta célula.
+      const list = belongsTo[idx] || [];
+      if (list.length) activeWordId = list[0];
+      highlightActive();
+    }
+    function cycleActiveForCell(idx){
+      const list = belongsTo[idx] || [];
+      if (!list.length) return;
+      if (!activeWordId){
+        activeWordId = list[0];
+        highlightActive();
+        return;
+      }
+      // Se a célula é cruzamento, alterna entre as palavras ao clicar
+      if (list.length > 1 && list.includes(activeWordId)){
+        const i = list.indexOf(activeWordId);
+        activeWordId = list[(i + 1) % list.length];
+        highlightActive();
+      } else if (!list.includes(activeWordId)){
+        activeWordId = list[0];
+        highlightActive();
+      }
+    }
+
+
+    function focusNextInActive(idx){
+      if (!activeWordId) { ensureActiveForCell(idx); }
+      const w = getWordById(activeWordId);
+      if (!w) return;
+      const cells = wordCells(w);
+      const pos = cells.indexOf(idx);
+      if (pos >= 0 && pos < cells.length - 1){
+        getCell(cells[pos+1])?.focus();
+      }
+    }
+
+    function focusPrevInActive(idx){
+      if (!activeWordId) { ensureActiveForCell(idx); }
+      const w = getWordById(activeWordId);
+      if (!w) return;
+      const cells = wordCells(w);
+      const pos = cells.indexOf(idx);
+      if (pos > 0){
+        getCell(cells[pos-1])?.focus();
+      }
+    }
+
+
+    function wordCells(w){
+      const cells = [];
+      for (let i=0; i<normalizeForCompare(w.answer).length; i++){
+        const r = w.row + (w.dir === "down" ? i : 0);
+        const c = w.col + (w.dir === "across" ? i : 0);
+        cells.push(toIdx(r,c));
+      }
+      return cells;
+    }
+
+    function readWord(w){
+      const cells = wordCells(w);
+      let text = "";
+      let complete = true;
+      for (const idx of cells){
+        const v = normalizeLetter(getCell(idx)?.value || "");
+        if (!v) complete = false;
+        text += v;
+      }
+      return {text, complete};
+    }
+
+    function evaluateWord(w){
+      const {text, complete} = readWord(w);
+      if (!complete) return "incomplete";
+     return (normalizeForCompare(text) === normalizeForCompare(w.answer)) ? "correct" : "wrong";
+
+    }
+
+    function paintWord(w, state){
+      const cells = wordCells(w);
+      for (const idx of cells){
+        const td = gridEl.querySelector('td[data-idx="'+idx+'"]');
+        if (!td) continue;
+        td.classList.remove("correct","wrong");
+        if (state === "correct") td.classList.add("correct");
+        if (state === "wrong") td.classList.add("wrong");
+      }
+
+      const tag = document.getElementById("clueState-"+w.id);
+      if (!tag) return;
+
+      if (state === "correct"){
+        tag.textContent = "✓ Você acertou!";
+        tag.style.color = "#008542";
+        tag.style.fontWeight = "800";
+      } else if (state === "wrong"){
+        tag.textContent = "✗ Errado. Verifique sua resposta";
+        tag.style.color = "#dc2626";
+        tag.style.fontWeight = "800";
+      } else {
+        tag.textContent = "";
+      }
+    }
+
+    function checkAll(showSummary=true){
+      let correct=0, wrong=0, incomplete=0;
+      for (const w of WORDS){
+        const state = evaluateWord(w);
+        paintWord(w, state);
+        if (state === "correct") correct++;
+        else if (state === "wrong") wrong++;
+        else incomplete++;
+      }
+
+      metaEl.textContent = `Corretas: ${correct} • Erradas: ${wrong} • Pendentes: ${incomplete}`;
+
+      // Mostra o modal assim que todas as palavras estiverem corretas (mesmo sem clicar em "verificar")
+      if (correct === WORDS.length && !winShown){
+        winShown = true;
+        openWin();
+      }
+
+      if (showSummary){
+        if (correct === WORDS.length){
+          setMsg("ok", "Parabéns! Você completou a cruzadinha.");
+        } else if (wrong > 0){
+          setMsg("bad", "Errado, verifique sua resposta.");
+        } else {
+          setMsg(null, "Preencha uma palavra inteira para validar.");
+        }
+      }
+    }
+
+    function focusNext(idx){ focusNextInActive(idx); }
+
+    function focusPrev(idx){ focusPrevInActive(idx); }
+
+    function moveFocus(idx, key){
+      ensureActiveForCell(idx);
+      const w = getWordById(activeWordId);
+      if (!w) return;
+      const cells = wordCells(w);
+      const pos = cells.indexOf(idx);
+      if (pos === -1) return;
+
+      if (key === "ArrowLeft" || key === "ArrowUp"){
+        if (pos > 0) getCell(cells[pos-1])?.focus();
+      } else if (key === "ArrowRight" || key === "ArrowDown"){
+        if (pos < cells.length - 1) getCell(cells[pos+1])?.focus();
+      }
+    }
+
+    // ===== Render =====
+    function renderClues(){
+      cluesEl.innerHTML = "";
+      for (const w of WORDS){
+        const li = document.createElement("li");
+        li.style.cursor = "pointer";
+        li.dataset.wordId = String(w.id);
+        li.addEventListener("click", () => setActiveWord(w.id));
+        li.innerHTML = `<div>${w.clue}</div>
+                        <div id="clueState-${w.id}" style="margin-top:2px;font-size:13px;"></div>`;
+        cluesEl.appendChild(li);
+      }
+    }
+
+    function renderGrid(){
+      gridEl.innerHTML = "";
+      for (let r=1; r<=SIZE; r++){
+        const tr = document.createElement("tr");
+        for (let c=1; c<=SIZE; c++){
+          const idx = toIdx(r,c);
+          const td = document.createElement("td");
+          td.dataset.idx = String(idx);
+
+          if (solution[idx] === null){
+            td.className = "black";
+            tr.appendChild(td);
+            continue;
+          }
+
+          if (numberedCells.has(idx)){
+            const n = document.createElement("div");
+            n.className = "num";
+            n.textContent = numberedCells.get(idx);
+            td.appendChild(n);
+          }
+
+          const input = document.createElement("input");
+          input.dataset.idx = String(idx);
+          input.maxLength = 1;
+          input.autocomplete = "off";
+          input.spellcheck = false;
+
+          input.addEventListener("pointerdown", () => { cycleActiveForCell(idx); });
+
+          input.addEventListener("focus", () => { ensureActiveForCell(idx); });
+
+          input.addEventListener("input", (e) => {
+            const t = e.target;
+            t.value = normalizeLetter(t.value);
+            if (t.value) focusNext(idx);
+            checkAll(false);
+          });
+
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Backspace" && !e.target.value) focusPrev(idx);
+            if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)){
+              e.preventDefault();
+              moveFocus(idx, e.key);
+            }
+          });
+
+          td.appendChild(input);
+          tr.appendChild(td);
+        }
+        gridEl.appendChild(tr);
+      }
+    }
+
+    function clearAll(){
+      winShown = false;
+      closeWin();
+      gridEl.querySelectorAll("td").forEach(td => td.classList.remove("correct","wrong"));
+      gridEl.querySelectorAll("input").forEach(inp => inp.value = "");
+      WORDS.forEach(w => {
+        const el = document.getElementById("clueState-"+w.id);
+        if (el) el.textContent = "";
+      });
+      setMsg(null, "Preencha uma palavra inteira para validar.");
+      checkAll(false);
+      // foco no início da 3
+      activeWordId = null;
+      highlightActive();
+      activeWordId = 3;
+    highlightActive();
+    getCell(toIdx(3,3))?.focus();
+    }
+
+    // ===== Scale (igual ao anexo) =====
+    function applyScale() {
+      const baseW = 1155, baseH = 650;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const scale = Math.min(vw / baseW, vh / baseH, 1);
+      document.getElementById('stage').style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    function fitGrid(){
+      // Faz a grade caber inteira dentro do painel (largura e altura)
+      if (!gridWrap) return;
+      // garante escala 1 para medir
+      gridWrap.style.transform = "scale(1)";
+      // usa requestAnimationFrame para medir após layout
+      requestAnimationFrame(() => {
+        const board = document.getElementById("board");
+        if (!board) return;
+
+        const cs = getComputedStyle(board);
+        const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+        const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+
+        const availW = board.clientWidth - padX;
+        const availH = board.clientHeight - padY;
+
+        const table = document.getElementById("grid");
+        if (!table) return;
+
+        const tableW = table.offsetWidth;
+        const tableH = table.offsetHeight;
+
+        if (!tableW || !tableH) return;
+
+        const s = Math.min(availW / tableW, availH / tableH);
+        gridWrap.style.transform = `scale(${s})`;
+      });
+    }
+
+
+    // init
+    renderClues();
+    renderGrid();
+    fitGrid();
+    checkAll(false);
+    activeWordId = 3;
+    highlightActive();
+    getCell(toIdx(3,3))?.focus();
+
+
+    document.getElementById("btnLimpar").addEventListener("click", () => { clearAll(); applyScale(); fitGrid(); });
+
+    btnCloseWin?.addEventListener("click", closeWin);
+    winOverlay?.addEventListener("click", (e) => { if (e.target === winOverlay) closeWin(); });
+
+    window.addEventListener('load', () => { applyScale(); fitGrid(); });
+    window.addEventListener('resize', () => { applyScale(); fitGrid(); });
+    window.addEventListener('orientationchange', () => { applyScale(); fitGrid(); });
+  </script>
+
+  </div>
+
+</body>
+</html>
