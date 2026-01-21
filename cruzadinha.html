@@ -30,7 +30,7 @@
 
     /* Visual mais simples que o “glass” original: sem blur, sem sombra pesada */
     .panel{
-      background: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.65);
       border: 1px solid rgba(0,0,0,.12);
       border-radius: 10px;
     }
@@ -54,14 +54,8 @@
       display:inline-flex;
       align-items:center;
       gap:12px;
-      padding:8px 12px;
-    }
-
-    #cronometro{
-      font-size:16px;
-      font-weight:700;
-      color:#333;
-      min-width: 140px;
+      padding:4px 4px;
+      margin: 0 0 0 420px;
     }
 
     button{
@@ -75,7 +69,6 @@
       transition: background .2s, transform .05s;
     }
     button:active{ transform: translateY(1px); }
-
 
 
     #btnLimpar{ background:#2196f3; }
@@ -133,12 +126,12 @@
     .msg.ok{ border-color: rgba(0,133,66,.35); color:#008542; }
     .msg.bad{ border-color: rgba(220,38,38,.35); color:#dc2626; }
 
+
+    
     #board{
-      flex: 1 1 auto;
       display:flex;
       justify-content:center;
-      align-items:center;
-      padding:12px;
+      align-self:center;
       box-sizing:border-box;
       position:relative;
     }
@@ -230,10 +223,10 @@
         <aside id="sidebar" class="panel">
           <h2>Perguntas</h2>
           <ol id="clues"></ol>
+          <div class="meta" id="meta"></div>
           <div id="msg" class="msg">
             Digite as palavras nos campos ao lado.
           </div>
-          <div class="meta" id="meta"></div>
         </aside>
 
         <section id="board" class="panel">
@@ -252,7 +245,6 @@
       </div>
       <div style="display:flex; gap:10px; justify-content:flex-end;">
         <button id="btnCloseWin" style="background:#616161;">Fechar</button>
-        <button id="btnNewWin" style="background:#2196f3;">Novo jogo</button>
       </div>
     </div>
 
